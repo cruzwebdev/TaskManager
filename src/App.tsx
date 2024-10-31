@@ -1,49 +1,67 @@
 import React, { useState } from 'react';
 import { Plus, Search, Bell, Menu, X } from 'lucide-react';
 import { TaskList } from './components/TaskList';
-import type { Task } from './types/task';
+import { TaskModal } from './components/TaskModal';
+import { tasks as tasksApi } from './services/api';
+import type { Task, CreateTaskInput } from './types/task';
+import { toast } from 'react-hot-toast';
 
 const MOCK_TASKS: Task[] = [
   {
     id: '1',
     title: 'Design New Dashboard',
     description: 'Create wireframes and high-fidelity designs for the analytics dashboard',
-    dueDate: new Date('2024-03-25'),
+    dueDate: '2024-03-25',
     priority: 'high',
     status: 'in-progress',
     assignee: 'Sarah Chen',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: '2024-03-20',
+    updatedAt: '2024-03-20',
   },
   {
     id: '2',
     title: 'API Integration',
     description: 'Implement REST API endpoints for user authentication and task management',
-    dueDate: new Date('2024-03-28'),
+    dueDate: '2024-03-28',
     priority: 'medium',
     status: 'todo',
     assignee: 'Mike Johnson',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: '2024-03-20',
+    updatedAt: '2024-03-20',
   },
   {
     id: '3',
     title: 'User Testing',
     description: 'Conduct user testing sessions and gather feedback on the new features',
-    dueDate: new Date('2024-03-30'),
+    dueDate: '2024-03-30',
     priority: 'low',
     status: 'todo',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: '2024-03-20',
+    updatedAt: '2024-03-20',
   },
 ];
 
 function App() {
-  const [tasks] = useState<Task[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
+
+  const handleCreateTask = async (taskData: CreateTaskInput) => {
+    try {
+      const newTask = await tasksApi.create(taskData);
+      setTasks(prevTasks => [...prevTasks, newTask]);
+      setIsTaskModalOpen(false);
+      toast.success('Task created successfully');
+    } catch (error) {
+      toast.error('Failed to create task');
+      console.error('Error creating task:', error);
+    }
+  };
 
   const handleEditTask = (task: Task) => {
-    console.log('Edit task:', task);
+    setEditingTask(task);
+    setIsTaskModalOpen(true);
   };
 
   return (
@@ -72,7 +90,10 @@ function App() {
                 <Bell className="h-6 w-6" />
               </button>
               
-              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+              <button 
+                onClick={() => setIsTaskModalOpen(true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
                 <Plus className="h-5 w-5 mr-1" />
                 New Task
               </button>
@@ -107,7 +128,13 @@ function App() {
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
             </div>
             
-            <button className="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+            <button 
+              onClick={() => {
+                setIsTaskModalOpen(true);
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
+            >
               <Plus className="h-5 w-5 mr-1" />
               New Task
             </button>
@@ -126,6 +153,17 @@ function App() {
         
         <TaskList tasks={tasks} onEditTask={handleEditTask} />
       </main>
+
+      {/* Task Modal */}
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => {
+          setIsTaskModalOpen(false);
+          setEditingTask(undefined);
+        }}
+        onSubmit={handleCreateTask}
+        task={editingTask}
+      />
     </div>
   );
 }
