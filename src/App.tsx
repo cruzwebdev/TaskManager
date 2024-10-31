@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Bell, Menu, X } from 'lucide-react';
 import { TaskList } from './components/TaskList';
 import { TaskModal } from './components/TaskModal';
-import { tasks as tasksApi } from './services/api';
+import { AuthModal } from './components/AuthModal';
+import { tasks as tasksApi, auth as authApi } from './services/api';
 import type { Task, CreateTaskInput } from './types/task';
 import { toast } from 'react-hot-toast';
+import { Toaster } from 'react-hot-toast';
 
 const MOCK_TASKS: Task[] = [
   {
@@ -45,7 +47,29 @@ function App() {
   const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setIsAuthModalOpen(true);
+    } else {
+      setIsAuthenticated(true);
+      fetchTasks();
+    }
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      const fetchedTasks = await tasksApi.getAll();
+      setTasks(fetchedTasks);
+    } catch (error) {
+      toast.error('Failed to fetch tasks');
+      console.error('Error fetching tasks:', error);
+    }
+  };
 
   const handleCreateTask = async (taskData: CreateTaskInput) => {
     try {
@@ -64,8 +88,46 @@ function App() {
     setIsTaskModalOpen(true);
   };
 
+  const handleAuth = async ({ email, password, isLogin }: { email: string; password: string; isLogin: boolean }) => {
+    try {
+      if (isLogin) {
+        await authApi.login(email, password);
+      } else {
+        await authApi.register(email, password);
+      }
+      setIsAuthenticated(true);
+      setIsAuthModalOpen(false);
+      await fetchTasks();
+      toast.success(isLogin ? 'Logged in successfully' : 'Account created successfully');
+    } catch (error) {
+      toast.error(isLogin ? 'Login failed' : 'Registration failed');
+      console.error('Auth error:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    authApi.logout();
+    setIsAuthenticated(false);
+    setIsAuthModalOpen(true);
+    setTasks([]);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <>
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => {}} // Prevent closing when not authenticated
+          onSubmit={handleAuth}
+        />
+        <Toaster />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster />
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -96,6 +158,13 @@ function App() {
               >
                 <Plus className="h-5 w-5 mr-1" />
                 New Task
+              </button>
+
+              <button
+                onClick={handleLogout}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Logout
               </button>
             </div>
             
@@ -138,6 +207,13 @@ function App() {
               <Plus className="h-5 w-5 mr-1" />
               New Task
             </button>
+
+            <button
+              onClick={handleLogout}
+              className="w-full text-center text-sm text-gray-500 hover:text-gray-700"
+            >
+              Logout
+            </button>
           </div>
         </div>
       )}
@@ -163,6 +239,13 @@ function App() {
         }}
         onSubmit={handleCreateTask}
         task={editingTask}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSubmit={handleAuth}
       />
     </div>
   );
