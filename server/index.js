@@ -10,13 +10,36 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+// Configure CORS for development
+app.use(cors({
+  origin: 'http://localhost:5173', // Vite's default port
+  credentials: true
+}));
+
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/taskmanager')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+// MongoDB connection with proper error handling
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/taskmanager', {
+  serverSelectionTimeoutMS: 30000, // Timeout after 5s instead of 30s
+})
+.then(() => {
+  console.log('Connected to MongoDB successfully');
+})
+.catch((err) => {
+  console.error('MongoDB connection error:', err);
+  process.exit(1); // Exit if we can't connect to the database
+});
+
+// Basic error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', dbConnected: mongoose.connection.readyState === 1 });
+});
 
 // Routes
 app.use('/api/auth', authRoutes);
