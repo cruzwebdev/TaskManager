@@ -1,11 +1,11 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import type { Task } from '../types/task';
+import type { Task, CreateTaskInput } from '../types/task';
 
 interface TaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (task: Partial<Task>) => void;
+  onSubmit: (task: CreateTaskInput) => void;
   task?: Task;
 }
 
@@ -15,14 +15,15 @@ export function TaskModal({ isOpen, onClose, onSubmit, task }: TaskModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
-    const taskData: Partial<Task> = {
+    const taskData: CreateTaskInput = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
-      dueDate: new Date(formData.get('dueDate') as string),
+      dueDate: (formData.get('dueDate') as string),
       priority: formData.get('priority') as 'low' | 'medium' | 'high',
       status: formData.get('status') as 'todo' | 'in-progress' | 'completed',
-      assignee: formData.get('assignee') as string,
+      assignee: formData.get('assignee') as string || undefined,
     };
+    console.log(taskData)
     onSubmit(taskData);
   };
 
@@ -63,7 +64,7 @@ export function TaskModal({ isOpen, onClose, onSubmit, task }: TaskModalProps) {
             <input
               type="date"
               name="dueDate"
-              defaultValue={task?.dueDate.toISOString().split('T')[0]}
+              defaultValue={task?.dueDate}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               required
             />

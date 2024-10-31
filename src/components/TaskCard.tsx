@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Clock, Flag, MoreVertical, User } from 'lucide-react';
+import { Clock, Flag, MoreVertical, User, Edit, Trash2 } from 'lucide-react';
 import type { Task } from '../types/task';
 
 interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
+  onDelete: (taskId: string) => void;
 }
 
 const priorityColors = {
@@ -20,14 +21,60 @@ const statusColors = {
   'completed': 'bg-green-100 text-green-800',
 };
 
-export function TaskCard({ task, onEdit }: TaskCardProps) {
+export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-3">
         <h3 className="font-medium text-gray-900 truncate">{task.title}</h3>
-        <button className="text-gray-400 hover:text-gray-600">
-          <MoreVertical size={16} />
-        </button>
+        <div className="relative" ref={menuRef}>
+          <button 
+            className="text-gray-400 hover:text-gray-600 p-1"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <MoreVertical size={16} />
+          </button>
+          
+          {isMenuOpen && (
+            <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    onEdit(task);
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <Edit size={14} className="mr-2" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    onDelete(task.id);
+                    setIsMenuOpen(false);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 size={14} className="mr-2" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       
       <p className="text-gray-600 text-sm mb-4 line-clamp-2">{task.description}</p>
@@ -45,7 +92,7 @@ export function TaskCard({ task, onEdit }: TaskCardProps) {
       <div className="flex items-center justify-between text-sm text-gray-500">
         <div className="flex items-center">
           <Clock size={14} className="mr-1" />
-          <span>{format(task.dueDate, 'MMM d')}</span>
+          <span>{format(new Date(task.dueDate), 'MMM d')}</span>
         </div>
         {task.assignee && (
           <div className="flex items-center">

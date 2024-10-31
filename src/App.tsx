@@ -45,6 +45,8 @@ const MOCK_TASKS: Task[] = [
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>(MOCK_TASKS);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -61,10 +63,20 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const filtered = tasks.filter(task => 
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (task.assignee && task.assignee.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    setFilteredTasks(filtered);
+  }, [searchQuery, tasks]);
+
   const fetchTasks = async () => {
     try {
       const fetchedTasks = await tasksApi.getAll();
       setTasks(fetchedTasks);
+      setFilteredTasks(fetchedTasks);
     } catch (error) {
       toast.error('Failed to fetch tasks');
       console.error('Error fetching tasks:', error);
@@ -86,6 +98,17 @@ function App() {
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsTaskModalOpen(true);
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await tasksApi.delete(taskId);
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+      toast.success('Task deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete task');
+      console.error('Error deleting task:', error);
+    }
   };
 
   const handleAuth = async ({ email, password, isLogin }: { email: string; password: string; isLogin: boolean }) => {
@@ -110,6 +133,7 @@ function App() {
     setIsAuthenticated(false);
     setIsAuthModalOpen(true);
     setTasks([]);
+    setFilteredTasks([]);
   };
 
   if (!isAuthenticated) {
@@ -143,6 +167,8 @@ function App() {
                 <input
                   type="text"
                   placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -192,6 +218,8 @@ function App() {
               <input
                 type="text"
                 placeholder="Search tasks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
               />
               <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
@@ -227,7 +255,11 @@ function App() {
           </p>
         </div>
         
-        <TaskList tasks={tasks} onEditTask={handleEditTask} />
+        <TaskList 
+          tasks={filteredTasks} 
+          onEditTask={handleEditTask}
+          onDeleteTask={handleDeleteTask}
+        />
       </main>
 
       {/* Task Modal */}
