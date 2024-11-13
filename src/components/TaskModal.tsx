@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { format } from 'date-fns';
 import type { Task, CreateTaskInput } from '../types/task';
 
 interface TaskModalProps {
@@ -15,17 +16,27 @@ export function TaskModal({ isOpen, onClose, onSubmit, task }: TaskModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
+    
+    // Convert the date string to ISO format for the server
+    const dueDateStr = formData.get('dueDate') as string;
+    const dueDate = new Date(dueDateStr);
+    dueDate.setHours(23, 59, 59, 999); // Set to end of day
+    
     const taskData: CreateTaskInput = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
-      dueDate: (formData.get('dueDate') as string),
+      dueDate: dueDate.toISOString(),
       priority: formData.get('priority') as 'low' | 'medium' | 'high',
       status: formData.get('status') as 'todo' | 'in-progress' | 'completed',
       assignee: formData.get('assignee') as string || undefined,
     };
-    console.log(taskData)
     onSubmit(taskData);
   };
+
+  // Format the date for the input field if editing a task
+  const defaultDueDate = task?.dueDate ? 
+    format(new Date(task.dueDate), 'yyyy-MM-dd') : 
+    undefined;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -64,7 +75,7 @@ export function TaskModal({ isOpen, onClose, onSubmit, task }: TaskModalProps) {
             <input
               type="date"
               name="dueDate"
-              defaultValue={task?.dueDate}
+              defaultValue={defaultDueDate}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
               required
             />
