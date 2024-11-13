@@ -8,44 +8,9 @@ import type { Task, CreateTaskInput } from './types/task';
 import { toast } from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 
-const MOCK_TASKS: Task[] = [
-  {
-    id: '1',
-    title: 'Design New Dashboard',
-    description: 'Create wireframes and high-fidelity designs for the analytics dashboard',
-    dueDate: '2024-03-25',
-    priority: 'high',
-    status: 'in-progress',
-    assignee: 'Sarah Chen',
-    createdAt: '2024-03-20',
-    updatedAt: '2024-03-20',
-  },
-  {
-    id: '2',
-    title: 'API Integration',
-    description: 'Implement REST API endpoints for user authentication and task management',
-    dueDate: '2024-03-28',
-    priority: 'medium',
-    status: 'todo',
-    assignee: 'Mike Johnson',
-    createdAt: '2024-03-20',
-    updatedAt: '2024-03-20',
-  },
-  {
-    id: '3',
-    title: 'User Testing',
-    description: 'Conduct user testing sessions and gather feedback on the new features',
-    dueDate: '2024-03-30',
-    priority: 'low',
-    status: 'todo',
-    createdAt: '2024-03-20',
-    updatedAt: '2024-03-20',
-  },
-];
-
 function App() {
-  const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
-  const [filteredTasks, setFilteredTasks] = useState<Task[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -95,6 +60,20 @@ function App() {
     }
   };
 
+  const handleUpdateTask = async (taskId: string, taskData: Partial<Task>) => {
+    try {
+      const updatedTask = await tasksApi.update(taskId, taskData);
+      setTasks(prevTasks => 
+        prevTasks.map(task => task.id === taskId ? updatedTask : task)
+      );
+      setIsTaskModalOpen(false);
+      toast.success('Task updated successfully');
+    } catch (error) {
+      toast.error('Failed to update task');
+      console.error('Error updating task:', error);
+    }
+  };
+
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsTaskModalOpen(true);
@@ -108,6 +87,14 @@ function App() {
     } catch (error) {
       toast.error('Failed to delete task');
       console.error('Error deleting task:', error);
+    }
+  };
+
+  const handleTaskSubmit = (taskData: CreateTaskInput) => {
+    if (editingTask) {
+      handleUpdateTask(editingTask.id, taskData);
+    } else {
+      handleCreateTask(taskData);
     }
   };
 
@@ -269,7 +256,7 @@ function App() {
           setIsTaskModalOpen(false);
           setEditingTask(undefined);
         }}
-        onSubmit={handleCreateTask}
+        onSubmit={handleTaskSubmit}
         task={editingTask}
       />
 
