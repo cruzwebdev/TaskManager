@@ -1,13 +1,23 @@
+export interface Reminder {
+  id: string;
+  date: string;
+  recurring?: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval: number;
+  };
+}
+
 export interface Task {
   id: string;
   title: string;
   description: string;
-  dueDate: string; // Changed from Date to string for serialization
+  dueDate: string;
   priority: 'low' | 'medium' | 'high';
   status: 'todo' | 'in-progress' | 'completed';
   assignee?: string;
-  createdAt: string; // Changed from Date to string for serialization
-  updatedAt: string; // Changed from Date to string for serialization
+  reminders: Reminder[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateTaskInput {
@@ -17,4 +27,5 @@ export interface CreateTaskInput {
   priority: 'low' | 'medium' | 'high';
   status: 'todo' | 'in-progress' | 'completed';
   assignee?: string;
+  reminders?: Omit<Reminder, 'id'>[];
 }

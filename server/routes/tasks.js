@@ -4,7 +4,15 @@ import { z } from 'zod';
 
 const router = express.Router();
 
-// Task validation schema
+// Enhanced validation schema with reminders
+const reminderSchema = z.object({
+  date: z.string().datetime({ message: 'Invalid reminder date format' }),
+  recurring: z.object({
+    frequency: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
+    interval: z.number().min(1)
+  }).optional()
+});
+
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
@@ -12,6 +20,7 @@ const taskSchema = z.object({
   priority: z.enum(['low', 'medium', 'high']),
   status: z.enum(['todo', 'in-progress', 'completed']),
   assignee: z.string().optional(),
+  reminders: z.array(reminderSchema).optional().default([])
 });
 
 // Get all tasks
@@ -26,6 +35,11 @@ router.get('/', async (req, res) => {
     const transformedTasks = tasks.map(task => ({
       id: task._id.toString(),
       ...task,
+      reminders: task.reminders.map(reminder => ({
+        id: reminder._id.toString(),
+        date: reminder.date.toISOString(),
+        recurring: reminder.recurring
+      })),
       _id: undefined,
       user: undefined,
       __v: undefined,
@@ -43,8 +57,15 @@ router.post('/', async (req, res) => {
   try {
     const validatedData = taskSchema.parse(req.body);
     
+    // Ensure reminders are properly formatted for MongoDB
+    const formattedReminders = validatedData.reminders.map(reminder => ({
+      date: new Date(reminder.date),
+      recurring: reminder.recurring
+    }));
+
     const task = new Task({
       ...validatedData,
+      reminders: formattedReminders,
       user: req.user.userId,
     });
 
@@ -54,6 +75,11 @@ router.post('/', async (req, res) => {
     const responseTask = {
       id: task._id.toString(),
       ...task.toObject(),
+      reminders: task.reminders.map(reminder => ({
+        id: reminder._id.toString(),
+        date: reminder.date.toISOString(),
+        recurring: reminder.recurring
+      })),
       _id: undefined,
       user: undefined,
       __v: undefined,
@@ -74,6 +100,16 @@ router.put('/:id', async (req, res) => {
   try {
     const validatedData = taskSchema.partial().parse(req.body);
 
+    console.log(validatedData)
+
+    // Format reminders if they exist in the update
+    if (validatedData.reminders) {
+      validatedData.reminders = validatedData.reminders.map(reminder => ({
+        date: new Date(reminder.date),
+        recurring: reminder.recurring
+      }));
+    }
+
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, user: req.user.userId },
       validatedData,
@@ -88,6 +124,11 @@ router.put('/:id', async (req, res) => {
     const responseTask = {
       id: task._id.toString(),
       ...task,
+      reminders: task.reminders.map(reminder => ({
+        id: reminder._id.toString(),
+        date: reminder.date.toISOString(),
+        recurring: reminder.recurring
+      })),
       _id: undefined,
       user: undefined,
       __v: undefined,

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Clock, Flag, MoreVertical, User, Edit, Trash2 } from 'lucide-react';
+import { Clock, Flag, MoreVertical, User, Edit, Trash2, Bell } from 'lucide-react';
 import type { Task } from '../types/task';
 
 interface TaskCardProps {
@@ -35,6 +35,13 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const formatReminder = (reminder: Task['reminders'][0]) => {
+    const date = format(new Date(reminder.date), 'MMM d, h:mm a');
+    if (!reminder.recurring) return date;
+    
+    return `${date} (${reminder.recurring.frequency}, every ${reminder.recurring.interval})`;
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
@@ -88,6 +95,20 @@ export function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
           {task.status}
         </span>
       </div>
+      
+      {task.reminders.length > 0 && (
+        <div className="mb-4">
+          <h4 className="text-xs font-medium text-gray-500 mb-2">Reminders</h4>
+          <div className="space-y-1">
+            {task.reminders.map((reminder) => (
+              <div key={reminder.id} className="flex items-start text-xs text-gray-600">
+                <Bell size={12} className="mr-1 mt-0.5 flex-shrink-0" />
+                <span>{formatReminder(reminder)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       
       <div className="flex items-center justify-between text-sm text-gray-500">
         <div className="flex items-center">
